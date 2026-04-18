@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "40929229124",
+    "project_id": "amv-project-a7f64",
+    "storage_bucket": "amv-project-a7f64.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:40929229124:android:61a43e8d360af2e2217f11",
+        "android_client_info": {
+          "package_name": "com.example.amv_hotel_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "40929229124-k2lit08aql5vadtjbpbk936tb4msombd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.amv_hotel_app",
+            "certificate_hash": "d9b6161c7b3502ef82d42e2544abb3d95ca79699"
+          }
+        },
+        {
+          "client_id": "40929229124-dekln73mmnnd0jocvm1tshsbukvg5b52.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNTMK1sSczr_FlpFtGukuUh_t_0MMh6cQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "40929229124-dekln73mmnnd0jocvm1tshsbukvg5b52.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "40929229124-nejs28vqotje18md8sce5d3p7ctp2v8f.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.amvHotelApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

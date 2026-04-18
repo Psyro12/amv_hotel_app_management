@@ -288,23 +288,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          GestureDetector(
-                            onTap: () {
-                               Navigator.pop(context);
-                               _currentIndex = 3; // Switch to Profile/Settings or Contact
-                               setState(() {});
-                            },
-                            child: Text(
-                              "Need help? Contact Front Desk",
-                              style: GoogleFonts.montserrat(
-                                fontSize: 12,
-                                color: amvGold,
-                                fontWeight: FontWeight.w600,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),

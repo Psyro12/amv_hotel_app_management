@@ -201,7 +201,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                                         color: amvViolet,
                                                         letterSpacing: 1.2,
                                                       ),
-                                                    ),                          const SizedBox(height: 15),
+                                                    ),
+                          const SizedBox(height: 15),
                           Text(
                             "You have 4 active pending orders. To maintain our high standard of service, please allow us to process your current orders before placing new ones.",
                             textAlign: TextAlign.center,
@@ -230,16 +231,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 "UNDERSTOOD",
                                 style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, letterSpacing: 1),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          Text(
-                            "Need help? Contact Front Desk",
-                            style: GoogleFonts.montserrat(
-                              fontSize: 12,
-                              color: amvGold,
-                              fontWeight: FontWeight.w600,
-                              decoration: TextDecoration.underline,
                             ),
                           ),
                         ],

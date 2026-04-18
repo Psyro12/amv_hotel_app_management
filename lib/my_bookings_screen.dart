@@ -124,6 +124,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
       case 'awaiting arrival':
       case 'awaiting_arrival': 
       case 'pending verification': return Colors.orange;
+      case 'cancel_requested':
+      case 'cancel requested': return Colors.deepOrange;
       case 'cancelled': return Colors.red;
       case 'completed': return Colors.blue;
       default: return Colors.grey;
@@ -139,10 +141,218 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
       case 'awaiting arrival':
       case 'awaiting_arrival': 
       case 'pending verification': return Icons.hourglass_empty_rounded;
+      case 'cancel_requested':
+      case 'cancel requested': return Icons.pending_actions_rounded;
       case 'cancelled': return Icons.cancel_outlined;
       case 'completed': return Icons.thumb_up_alt_outlined;
       default: return Icons.info_outline;
     }
+  }
+
+  // 🟢 NEW: REQUEST CANCELLATION LOGIC
+  Future<void> _requestCancellation(int bookingId, String reason) async {
+    try {
+      final response = await http.post(
+        Uri.parse("${ApiConfig.baseUrl}/api_request_cancellation.php"),
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({
+          'booking_id': bookingId,
+          'reason': reason,
+        }),
+      );
+
+      final data = json.decode(response.body);
+      if (data['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data['message']), backgroundColor: Colors.green),
+        );
+        _fetchBookings(); // Refresh list
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data['message']), backgroundColor: Colors.redAccent),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error requesting cancellation: $e");
+    }
+  }
+
+  void _showCancelReasonDialog(int bookingId) {
+    final TextEditingController reasonCtrl = TextEditingController();
+    
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 500),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+              .animate(CurvedAnimation(parent: animation, curve: Curves.fastOutSlowIn)),
+          child: child,
+        );
+      },
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Material(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+            color: Colors.white,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(30, 15, 30, 30),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle
+                  Container(
+                    width: 50, height: 5,
+                    margin: const EdgeInsets.only(bottom: 30),
+                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(5)),
+                  ),
+
+                  // 1. Signature AMV Icon Header
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [amvViolet, const Color(0xFF4A1955)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: amvViolet.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        )
+                      ],
+                    ),
+                    child: Icon(Icons.cancel_presentation_rounded, color: amvGold, size: 40),
+                  ),
+                  
+                  const SizedBox(height: 25),
+
+                  // 2. Title
+                  Text(
+                    "CANCEL BOOKING",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: amvViolet,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 15),
+
+                  Text(
+                    "Please let us know why you wish to cancel this reservation. Your feedback helps us improve.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      height: 1.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  // 3. Reason Input
+                  TextField(
+                    controller: reasonCtrl,
+                    maxLines: 4,
+                    style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w500),
+                    decoration: InputDecoration(
+                      hintText: "Enter your reason here...",
+                      hintStyle: GoogleFonts.montserrat(fontSize: 13, color: Colors.grey[400]),
+                      filled: true,
+                      fillColor: const Color(0xFFF9FAFB),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide(color: Colors.grey[200]!),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide(color: Colors.grey[100]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: const BorderSide(color: Color(0xFFD4AF37)),
+                      ),
+                      contentPadding: const EdgeInsets.all(20),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // 4. Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            side: BorderSide(color: Colors.grey[200]!),
+                          ),
+                          child: Text(
+                            "GO BACK",
+                            style: GoogleFonts.montserrat(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: Colors.grey[500],
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (reasonCtrl.text.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Please provide a reason.")),
+                              );
+                              return;
+                            }
+                            Navigator.pop(context); // Close this dialog
+                            Navigator.pop(context); // Close details modal
+                            _requestCancellation(bookingId, reasonCtrl.text.trim());
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            "SUBMIT",
+                            style: GoogleFonts.montserrat(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // 🟢 NEW: Premium Centered Modal (Fixes Overflow & Looks Engaging)
@@ -154,6 +364,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     
     final statusColor = _getStatusColor(status);
     final statusIcon = _getStatusIcon(status);
+
+    final rawStatus = booking['status']?.toString().toLowerCase() ?? '';
+    final arrivalStatus = booking['arrival_status']?.toString().toLowerCase() ?? '';
+
+    // Check if cancellation is allowed
+    // 1. Must NOT be already cancelled or rejected
+    // 2. Must NOT be already in-house or checked out
+    final bool canCancel = (rawStatus != 'cancelled' && rawStatus != 'rejected' && rawStatus != 'cancel_requested') && 
+                           (arrivalStatus != 'in_house' && arrivalStatus != 'checked_out');
 
     showGeneralDialog(
       context: context,
@@ -177,16 +396,16 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
             child: Container(
               width: double.infinity,
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.9, // Taller for better spacing
+                maxHeight: MediaQuery.of(context).size.height * 0.85, 
               ),
-              padding: const EdgeInsets.fromLTRB(30, 15, 30, 30),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 25), // 🟢 Compact Padding
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Drag Handle
                   Container(
-                    width: 50, height: 5,
-                    margin: const EdgeInsets.only(bottom: 25),
+                    width: 40, height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(5))
                   ),
 
@@ -197,49 +416,49 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                         children: [
                           // 1. Hero Icon (Top Center)
                           Container(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(15), // 🟢 Compact Circle
                             decoration: BoxDecoration(
                               color: statusColor.withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(statusIcon, size: 50, color: statusColor),
+                            child: Icon(statusIcon, size: 35, color: statusColor), // 🟢 Smaller Icon
                           ),
                           
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 12),
 
                           // 2. Title & Ref
                           Text(
                             "Booking Details",
                             style: GoogleFonts.montserrat(
-                              fontSize: 20, fontWeight: FontWeight.bold, color: amvViolet
+                              fontSize: 18, fontWeight: FontWeight.bold, color: amvViolet // 🟢 Smaller Title
                             ),
                           ),
-                          const SizedBox(height: 5),
+                          const SizedBox(height: 4),
                           Text(
                             "Ref: ${booking['booking_reference']}",
-                            style: GoogleFonts.montserrat(fontSize: 14, color: Colors.grey[500], letterSpacing: 1),
+                            style: GoogleFonts.montserrat(fontSize: 12, color: Colors.grey[500], letterSpacing: 0.5), // 🟢 Smaller Ref
                           ),
 
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 15),
 
-                          // 3. Engaging Status Pill (Centered, No Overflow)
+                          // 3. Engaging Status Pill
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
                               color: statusColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(25),
-                              border: Border.all(color: statusColor.withOpacity(0.5)),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: statusColor.withOpacity(0.4)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(statusIcon, size: 16, color: statusColor),
-                                const SizedBox(width: 8),
+                                Icon(statusIcon, size: 14, color: statusColor),
+                                const SizedBox(width: 6),
                                 Flexible(
                                   child: Text(
                                     status.toString().toUpperCase().replaceAll('_', ' '),
                                     style: GoogleFonts.montserrat(
-                                      fontSize: 12, fontWeight: FontWeight.bold, color: statusColor
+                                      fontSize: 10, fontWeight: FontWeight.bold, color: statusColor
                                     ),
                                     textAlign: TextAlign.center,
                                   ),
@@ -248,8 +467,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                             ),
                           ),
 
-                          const SizedBox(height: 30),
-                          const Divider(),
+                          const SizedBox(height: 20),
+                          const Divider(height: 1),
                           const SizedBox(height: 20),
 
                           // 4. Details Section
@@ -258,73 +477,92 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                           _buildDetailRow(Icons.event, "Check-out", checkOut),
                           
                           if (status.toLowerCase() == 'confirmed' || status.toLowerCase() == 'in house' || status.toLowerCase() == 'in_house') ...[
-                            const SizedBox(height: 25),
+                            const SizedBox(height: 10),
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(20),
+                              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
                               decoration: BoxDecoration(
                                 color: Colors.green.withOpacity(0.05),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.green.withOpacity(0.2)),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.green.withOpacity(0.15)),
                               ),
                               child: Column(
                                 children: [
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.wifi, color: Colors.green[700], size: 20),
-                                      const SizedBox(width: 10),
+                                      Icon(Icons.wifi, color: Colors.green[700], size: 14),
+                                      const SizedBox(width: 6),
                                       Text(
                                         "HOTEL WI-FI",
                                         style: GoogleFonts.montserrat(
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 12,
+                                          fontSize: 10,
                                           color: Colors.green[700],
-                                          letterSpacing: 1,
+                                          letterSpacing: 0.5,
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 15),
-                                  _buildWifiRow("SSID", _wifiSsid),
                                   const SizedBox(height: 8),
+                                  _buildWifiRow("SSID", _wifiSsid),
+                                  const SizedBox(height: 4),
                                   _buildWifiRow("Password", _wifiPassword),
                                 ],
                               ),
                             ),
                           ],
 
-                          const SizedBox(height: 25),
+                          const SizedBox(height: 15),
                           
                           // 5. Big Total Price
                           Text(
                             "TOTAL AMOUNT", 
-                            style: GoogleFonts.montserrat(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[400], letterSpacing: 1.5)
+                            style: GoogleFonts.montserrat(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey[400], letterSpacing: 1)
                           ),
-                          const SizedBox(height: 5),
+                          const SizedBox(height: 2),
                           Text(
                             "₱$totalPrice",
-                            style: GoogleFonts.montserrat(fontSize: 32, fontWeight: FontWeight.w800, color: amvGold),
+                            style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.w800, color: amvGold), // 🟢 Compact price
                           ),
                         ],
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 15),
 
-                  // 6. Close Button
+                  // 6. Action Area (Fixed at bottom)
+                  if (canCancel) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showCancelReasonDialog(int.parse(booking['id'].toString())),
+                        icon: const Icon(Icons.cancel_outlined, size: 14),
+                        label: Text("REQUEST CANCELLATION", style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.redAccent,
+                          side: const BorderSide(color: Colors.redAccent),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // 7. Close Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: amvViolet,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
                       ),
-                      child: Text("CLOSE", style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1)),
+                      child: Text("CLOSE", style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 12, letterSpacing: 0.5)),
                     ),
                   ),
                 ],
@@ -338,24 +576,24 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.only(bottom: 12), // 🟢 Tighter
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8), // 🟢 Compact
             decoration: BoxDecoration(
               color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: amvViolet, size: 20),
+            child: Icon(icon, color: amvViolet, size: 16), // 🟢 Smaller
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: GoogleFonts.montserrat(fontSize: 12, color: Colors.grey)),
-                Text(value, style: GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
+                Text(label, style: GoogleFonts.montserrat(fontSize: 10, color: Colors.grey)), // 🟢 Smaller
+                Text(value, style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)), // 🟢 Smaller
               ],
             ),
           ),
@@ -368,8 +606,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: GoogleFonts.montserrat(fontSize: 13, color: Colors.grey[600])),
-        Text(value, style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+        Text(label, style: GoogleFonts.montserrat(fontSize: 11, color: Colors.grey[600])), // 🟢 Smaller
+        Text(value, style: GoogleFonts.montserrat(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)), // 🟢 Smaller
       ],
     );
   }

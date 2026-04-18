@@ -190,16 +190,6 @@ class _AvailableRoomsScreenState extends State<AvailableRoomsScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 15),
-                          Text(
-                            "Need help? Contact Reservations",
-                            style: GoogleFonts.montserrat(
-                              fontSize: 12,
-                              color: amvGold,
-                              fontWeight: FontWeight.w600,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
                         ],
                       ),
                     ),

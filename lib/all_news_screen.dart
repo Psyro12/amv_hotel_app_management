@@ -72,6 +72,7 @@ class _AllNewsScreenState extends State<AllNewsScreen> {
     String imageUrl = Uri.encodeFull(newsItem['full_image_url']);
     String title = newsItem['title'] ?? "News";
     String date = newsItem['formatted_date'] ?? "";
+    String rawDate = newsItem['news_date'] ?? ""; // Added raw date
     String content =
         newsItem['content'] ??
         newsItem['description'] ??
@@ -87,6 +88,7 @@ class _AllNewsScreenState extends State<AllNewsScreen> {
               title: title,
               imageUrl: imageUrl,
               date: date,
+              rawDate: rawDate, // Pass raw date
               content: content,
             ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -341,10 +343,11 @@ class _AllNewsScreenState extends State<AllNewsScreen> {
 }
 
 // 🟢 UPDATED: Immersive "News Showcase" Detail Screen
-class NewsDetailScreen extends StatelessWidget {
+class NewsDetailScreen extends StatefulWidget {
   final String title;
   final String imageUrl;
   final String date;
+  final String rawDate;
   final String content;
 
   const NewsDetailScreen({
@@ -352,8 +355,96 @@ class NewsDetailScreen extends StatelessWidget {
     required this.title,
     required this.imageUrl,
     required this.date,
+    required this.rawDate,
     required this.content,
   }) : super(key: key);
+
+  @override
+  _NewsDetailScreenState createState() => _NewsDetailScreenState();
+}
+
+class _NewsDetailScreenState extends State<NewsDetailScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Setup Entrance Animation
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    );
+
+    // Start animation after page load
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // 🟢 Helper: Calculate Relative Time
+  String _getTimeAgo() {
+    try {
+      // 1. Check for invalid or "Recently" fallbacks
+      if (widget.rawDate.isEmpty || 
+          widget.rawDate.contains("0000-00-00") || 
+          widget.date.toLowerCase().contains("recently") ||
+          widget.date.contains("-0001")) {
+        return "posted recently";
+      }
+
+      DateTime postDate = DateTime.parse(widget.rawDate);
+      DateTime now = DateTime.now();
+
+      // 2. Sanity Check: If the date is absurdly old (e.g., year 0/1/-1 from DB error)
+      if (postDate.year < 2010) { // News probably isn't from before 2010
+        return "posted recently";
+      }
+
+      Duration diff = now.difference(postDate);
+
+      // 3. Handle future dates (if server time is slightly ahead)
+      if (diff.isNegative) {
+        return "posted just now";
+      }
+
+      if (diff.inDays >= 365) {
+        int years = (diff.inDays / 365).floor();
+        return "posted $years ${years == 1 ? 'year' : 'years'} ago";
+      } else if (diff.inDays >= 30) {
+        int months = (diff.inDays / 30).floor();
+        return "posted $months ${months == 1 ? 'month' : 'months'} ago";
+      } else if (diff.inDays > 0) {
+        return "posted ${diff.inDays} ${diff.inDays == 1 ? 'day' : 'days'} ago";
+      } else if (diff.inHours > 0) {
+        return "posted ${diff.inHours} ${diff.inHours == 1 ? 'hour' : 'hours'} ago";
+      } else if (diff.inMinutes > 0) {
+        return "posted ${diff.inMinutes} ${diff.inMinutes == 1 ? 'min' : 'mins'} ago";
+      } else {
+        return "posted just now";
+      }
+    } catch (e) {
+      return "posted recently";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -363,13 +454,13 @@ class NewsDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
         slivers: [
-          // 1. IMMERSIVE HEADER
+          // 1. Immersive Parallax Header
           SliverAppBar(
-            expandedHeight: 400, // Tall header
+            expandedHeight: 400, // Very tall header for impact
             pinned: true,
             backgroundColor: amvViolet,
+            elevation: 0,
             leading: IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(8),
@@ -377,7 +468,11 @@ class NewsDetailScreen extends StatelessWidget {
                   color: Colors.black.withOpacity(0.3),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.arrow_back,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
               onPressed: () => Navigator.pop(context),
             ),
@@ -385,24 +480,17 @@ class NewsDetailScreen extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
+                  // 🟢 Hero Image (Catches the flying image)
                   Hero(
-                    tag: imageUrl,
+                    tag: widget.imageUrl,
                     child: Image.network(
-                      imageUrl,
+                      widget.imageUrl,
                       fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return SkeletonContainer(
-                          width: double.infinity,
-                          height: double.infinity,
-                          borderRadius: 0,
-                          icon: Icons.newspaper,
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) =>
-                          Container(color: Colors.grey[900]),
+                      errorBuilder: (_, __, ___) =>
+                          Container(color: Colors.grey),
                     ),
                   ),
+                  // Gradient for Text Visibility
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -410,13 +498,14 @@ class NewsDetailScreen extends StatelessWidget {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withOpacity(0.3),
-                          Colors.black.withOpacity(0.8),
+                          amvViolet.withOpacity(0.2),
+                          amvViolet.withOpacity(0.9),
                         ],
-                        stops: const [0.5, 0.8, 1.0],
+                        stops: const [0.4, 0.7, 1.0],
                       ),
                     ),
                   ),
+                  // Title on Image
                   Positioned(
                     bottom: 40,
                     left: 20,
@@ -424,36 +513,42 @@ class NewsDetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Category / Date Badge
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
                           decoration: BoxDecoration(
                             color: amvGold,
                             borderRadius: BorderRadius.circular(5),
                           ),
                           child: Text(
-                            "NEWS UPDATE",
+                            (widget.date.contains("-0001") || widget.date.contains("0000")) 
+                                ? "RECENTLY" 
+                                : widget.date.toUpperCase(),
                             style: GoogleFonts.montserrat(
+                              color: Colors.white,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: 1.5,
+                              letterSpacing: 1,
                             ),
                           ),
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          title,
+                          widget.title,
                           style: GoogleFonts.montserrat(
+                            color: Colors.white,
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            height: 1.1,
+                            height: 1.2,
                             shadows: [
                               Shadow(
-                                blurRadius: 10.0,
                                 color: Colors.black.withOpacity(0.5),
+                                blurRadius: 10,
                                 offset: const Offset(0, 2),
-                              )
+                              ),
                             ],
                           ),
                         ),
@@ -465,78 +560,81 @@ class NewsDetailScreen extends StatelessWidget {
             ),
           ),
 
-          // 2. CONTENT BODY
+          // 2. Animated Content Body
           SliverToBoxAdapter(
-            child: Container(
-              transform: Matrix4.translationValues(0, -20, 0),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-              ),
-              padding: const EdgeInsets.all(25.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Date Row
-                  Row(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Container(
+                  // Overlap effect
+                  transform: Matrix4.translationValues(0, -20, 0),
+                  padding: const EdgeInsets.all(25),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(30),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: amvViolet.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(Icons.calendar_today, color: amvViolet, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      // Meta Row
+                      Row(
                         children: [
+                          const Icon(Icons.access_time_filled_rounded, size: 16, color: Colors.grey),
+                          const SizedBox(width: 8),
                           Text(
-                            "PUBLISHED ON",
+                            _getTimeAgo(),
                             style: GoogleFonts.montserrat(
-                              fontSize: 10,
+                              fontSize: 12,
                               color: Colors.grey,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          Text(
-                            date,
-                            style: GoogleFonts.montserrat(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
+                          const Spacer(),
+                          const Icon(
+                            Icons.newspaper_rounded,
+                            color: Color(0xFFD4AF37),
+                            size: 20,
                           ),
                         ],
                       ),
+                      const SizedBox(height: 20),
+                      const Divider(),
+                      const SizedBox(height: 20),
+
+                      // Main Content
+                      Html(
+                        data: widget.content,
+                        style: {
+                          "body": Style(
+                            fontFamily: GoogleFonts.montserrat().fontFamily,
+                            fontSize: FontSize(16),
+                            lineHeight: LineHeight(1.8),
+                            color: Colors.grey[800],
+                            margin: Margins.zero,
+                          ),
+                          "p": Style(margin: Margins.only(bottom: 20)),
+                          "strong": Style(color: amvViolet),
+                        },
+                      ),
+
+                      // Footer
+                      const SizedBox(height: 40),
+                      Center(
+                        child: Text(
+                          "●  ●  ●",
+                          style: TextStyle(
+                            color: Colors.grey[300],
+                            fontSize: 20,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 60),
                     ],
                   ),
-                  const SizedBox(height: 30),
-                  const Divider(color: Color(0xFFEEEEEE)),
-                  const SizedBox(height: 20),
-
-                  // Content
-                  Html(
-                    data: content,
-                    style: {
-                      "body": Style(
-                        fontFamily: GoogleFonts.montserrat().fontFamily,
-                        fontSize: FontSize(16),
-                        lineHeight: LineHeight(1.8),
-                        color: Colors.grey[700],
-                        margin: Margins.zero,
-                      ),
-                      "p": Style(margin: Margins.only(bottom: 15)),
-                      "strong": Style(color: amvViolet),
-                    },
-                  ),
-                  const SizedBox(height: 50),
-                  Center(
-                    child: Icon(Icons.newspaper, color: amvGold.withOpacity(0.3), size: 30),
-                  ),
-                  const SizedBox(height: 50),
-                ],
+                ),
               ),
             ),
           ),

@@ -93,9 +93,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     }
   }
 
-  // 🟢 NEW: Smooth Slide-Up Details Modal (Consistent with Active Bookings)
+  // 🟢 NEW: Smooth Slide-Up Details Modal (Consistent with My Bookings)
   void _showBookingDetails(Map<String, dynamic> booking) {
-    // Parse Data for Modal
     String formatDate(String? dateStr) {
       if (dateStr == null) return "N/A";
       try {
@@ -113,12 +112,20 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     final String price = double.tryParse(booking['total_price'].toString())?.toStringAsFixed(2) ?? "0.00";
     final Color statusColor = _getStatusColor(status);
 
+    // Get Icon based on status
+    IconData statusIcon = Icons.history_rounded;
+    if (status.toLowerCase().contains('arrived') || status.toLowerCase().contains('completed')) {
+      statusIcon = Icons.check_circle_outline_rounded;
+    } else if (status.toLowerCase().contains('cancel')) {
+      statusIcon = Icons.cancel_outlined;
+    }
+
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
       barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 600), // Slow & Smooth
+      transitionDuration: const Duration(milliseconds: 600),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         return SlideTransition(
           position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
@@ -137,104 +144,115 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
-              padding: const EdgeInsets.fromLTRB(25, 12, 25, 25),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 50, height: 5,
-                        margin: const EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(5))
-                      )
-                    ),
-                    
-                    // Header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "History Details",
-                              style: GoogleFonts.montserrat(
-                                fontSize: 22, fontWeight: FontWeight.bold, color: amvViolet
-                              ),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 25), // 🟢 Compact Padding
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag Handle
+                  Container(
+                    width: 40, height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(5))
+                  ),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        children: [
+                          // 1. Hero Icon (Top Center)
+                          Container(
+                            padding: const EdgeInsets.all(15),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1),
+                              shape: BoxShape.circle,
                             ),
-                            Text(
-                              "Ref: $ref",
-                              style: GoogleFonts.montserrat(fontSize: 12, color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: statusColor.withOpacity(0.3)),
+                            child: Icon(statusIcon, size: 35, color: statusColor),
                           ),
-                          child: Text(
-                            status.toString().toUpperCase().replaceAll('_', ' '),
+                          
+                          const SizedBox(height: 12),
+
+                          // 2. Title & Ref
+                          Text(
+                            "History Details",
                             style: GoogleFonts.montserrat(
-                              fontSize: 12, fontWeight: FontWeight.bold, color: statusColor
+                              fontSize: 18, fontWeight: FontWeight.bold, color: amvViolet
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Ref: $ref",
+                            style: GoogleFonts.montserrat(fontSize: 11, color: Colors.grey[500], letterSpacing: 0.5),
+                          ),
 
-                    const SizedBox(height: 25),
-                    const Divider(),
-                    const SizedBox(height: 15),
+                          const SizedBox(height: 15),
 
-                    // Details List
-                    _buildDetailRow(Icons.bed, "Room Type", rooms),
-                    const SizedBox(height: 15),
-                    _buildDetailRow(Icons.calendar_today, "Check-in Date", checkIn),
-                    const SizedBox(height: 15),
-                    _buildDetailRow(Icons.event, "Check-out Date", checkOut),
-                    
-                    const SizedBox(height: 25),
-                    const Divider(),
-                    const SizedBox(height: 15),
+                          // 3. Status Pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: statusColor.withOpacity(0.4)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(statusIcon, size: 14, color: statusColor),
+                                const SizedBox(width: 6),
+                                Text(
+                                  status.toString().toUpperCase().replaceAll('_', ' '),
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 10, fontWeight: FontWeight.bold, color: statusColor
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
 
-                    // Total
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("TOTAL PAID", style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
-                        Text(
-                          "₱$price",
-                          style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.bold, color: amvGold),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(height: 20),
+                          const Divider(height: 1),
+                          const SizedBox(height: 20),
 
-                    const SizedBox(height: 30),
+                          // 4. Details Section
+                          _buildDetailRow(Icons.bed, "Room Type", rooms),
+                          _buildDetailRow(Icons.calendar_today, "Check-in Date", checkIn),
+                          _buildDetailRow(Icons.event, "Check-out Date", checkOut),
+                          
+                          const SizedBox(height: 15),
 
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: amvViolet,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          elevation: 0,
-                        ),
-                        child: Text("CLOSE", style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: Colors.white)),
+                          // 5. Total Price
+                          Text(
+                            "TOTAL PAID", 
+                            style: GoogleFonts.montserrat(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey[400], letterSpacing: 1)
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "₱$price",
+                            style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.w800, color: amvGold),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  // 6. Close Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: amvViolet,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                      child: Text("CLOSE", style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 12, letterSpacing: 0.5)),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -244,27 +262,30 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
   }
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(10),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: amvViolet, size: 16),
           ),
-          child: Icon(icon, color: amvViolet, size: 20),
-        ),
-        const SizedBox(width: 15),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: GoogleFonts.montserrat(fontSize: 12, color: Colors.grey)),
-              Text(value, style: GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-            ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: GoogleFonts.montserrat(fontSize: 10, color: Colors.grey)),
+                Text(value, style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

@@ -71,13 +71,13 @@ class _AllEventsScreenState extends State<AllEventsScreen> {
     }
   }
 
-  void _showEventDetails(Map<String, dynamic> event) {
-    String imageUrl = Uri.encodeFull(event['full_image_url']);
-    String title = event['title'] ?? "Event";
-    String date = event['formatted_date'] ?? "";
-    String time = event['time_start'] ?? "TBA";
-    String content = event['description'] ?? event['content'] ?? "No details available.";
-    String rawDate = event['event_date'] ?? "";
+  void _showEventDetails(Map<String, dynamic> newsItem) {
+    String imageUrl = Uri.encodeFull(newsItem['full_image_url']);
+    String title = newsItem['title'] ?? "Event";
+    String date = newsItem['formatted_date'] ?? "";
+    String time = newsItem['time_start'] ?? "TBA";
+    String content = newsItem['description'] ?? newsItem['content'] ?? "No details available.";
+    String rawDate = newsItem['display_date_raw'] ?? newsItem['event_date'] ?? "";
 
     Navigator.push(
       context,
@@ -389,6 +389,38 @@ class EventDetailScreen extends StatelessWidget {
       }
     } catch (e) {}
 
+    // 🟢 2. Relative Time (Time Ago) Calculation Logic
+    String getTimeAgo(String raw, String formatted) {
+      try {
+        if (raw.isEmpty || raw.contains("0000-00-00") || formatted.toLowerCase().contains("recently")) {
+          return "posted recently";
+        }
+        DateTime postDate = DateTime.parse(raw);
+        DateTime now = DateTime.now();
+        if (postDate.year < 2010) return "posted recently";
+        Duration diff = now.difference(postDate);
+        if (diff.isNegative) return "posted just now";
+
+        if (diff.inDays >= 365) {
+          int years = (diff.inDays / 365).floor();
+          return "posted $years ${years == 1 ? 'year' : 'years'} ago";
+        } else if (diff.inDays >= 30) {
+          int months = (diff.inDays / 30).floor();
+          return "posted $months ${months == 1 ? 'month' : 'months'} ago";
+        } else if (diff.inDays > 0) {
+          return "posted ${diff.inDays} ${diff.inDays == 1 ? 'day' : 'days'} ago";
+        } else if (diff.inHours > 0) {
+          return "posted ${diff.inHours} ${diff.inHours == 1 ? 'hour' : 'hours'} ago";
+        } else if (diff.inMinutes > 0) {
+          return "posted ${diff.inMinutes} ${diff.inMinutes == 1 ? 'min' : 'mins'} ago";
+        } else {
+          return "posted just now";
+        }
+      } catch (e) { return "posted recently"; }
+    }
+
+    String postedTimeAgo = getTimeAgo(rawDate, dateString);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
@@ -482,6 +514,27 @@ class EventDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 🟢 Meta Row (Time Ago)
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time_filled_rounded, size: 16, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Text(
+                        postedTimeAgo,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.event_available_rounded, color: amvGold, size: 20),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(),
+                  const SizedBox(height: 20),
+
                    Row(
                     children: [
                       Expanded(child: _buildInfoItem(Icons.calendar_today, "DATE", dateString, amvViolet)),

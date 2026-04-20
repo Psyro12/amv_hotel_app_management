@@ -95,17 +95,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
-              padding: const EdgeInsets.fromLTRB(30, 15, 30, 30),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 25), // 🟢 Compact Padding
               child: Column(
                 mainAxisSize: MainAxisSize.min, 
                 children: [
                   // Drag Handle
                   Container(
-                    width: 50, height: 5,
+                    width: 40, height: 4,
                     margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(5)),
                   ),
@@ -115,61 +111,73 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                       physics: const BouncingScrollPhysics(),
                       child: Column(
                         children: [
+                          // 1. Hero Icon
                           Container(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(15),
                             decoration: BoxDecoration(
                               color: amvViolet.withOpacity(0.05),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(icon, size: 40, color: amvViolet),
+                            child: Icon(icon, size: 35, color: amvViolet),
                           ),
                           
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 12),
                           
+                          // 2. Category
                           Text(
                             category.toUpperCase(),
                             style: GoogleFonts.montserrat(
-                              fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[500], letterSpacing: 1.5
+                              fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[400], letterSpacing: 1.2
                             ),
                           ),
                           
-                          const SizedBox(height: 5),
-                          
-                          Text(
-                            "₱${double.tryParse(tx['amount'].toString())?.toStringAsFixed(2) ?? "0.00"}",
-                            style: GoogleFonts.montserrat(
-                              fontSize: 36, fontWeight: FontWeight.w800, color: amvViolet
+                          const SizedBox(height: 4),
+
+                          // 3. Status Pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: statusColor.withOpacity(0.4)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.info_outline, size: 14, color: statusColor),
+                                const SizedBox(width: 6),
+                                Text(
+                                  status,
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 10, fontWeight: FontWeight.bold, color: statusColor
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
 
                           const SizedBox(height: 20),
-                          const Divider(),
+                          const Divider(height: 1),
                           const SizedBox(height: 20),
 
-                          _buildDetailRow("Reference ID", tx['ref_id']?.toString() ?? "N/A"),
-                          _buildDetailRow("Payment Method", tx['payment_method']?.toString() ?? "Cash"),
-                          _buildDetailRow("Date", tx['date']?.toString() ?? "N/A"),
+                          // 4. Details Section
+                          _buildDetailRow(Icons.tag_rounded, "Reference ID", tx['ref_id']?.toString() ?? "N/A"),
+                          _buildDetailRow(Icons.payment_rounded, "Payment Method", tx['payment_method']?.toString() ?? "Cash"),
+                          _buildDetailRow(Icons.calendar_today_rounded, "Date", tx['date']?.toString() ?? "N/A"),
                           
                           const SizedBox(height: 15),
                           
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text("Status", style: GoogleFonts.montserrat(fontSize: 14, color: Colors.grey[600])),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  status,
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 12, fontWeight: FontWeight.bold, color: statusColor
-                                  ),
-                                ),
-                              ),
-                            ],
+                          // 5. Amount
+                          Text(
+                            "TOTAL AMOUNT", 
+                            style: GoogleFonts.montserrat(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey[400], letterSpacing: 1)
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "₱${double.tryParse(tx['amount'].toString())?.toStringAsFixed(2) ?? "0.00"}",
+                            style: GoogleFonts.montserrat(
+                              fontSize: 24, fontWeight: FontWeight.w800, color: amvViolet
+                            ),
                           ),
                           const SizedBox(height: 20),
                         ],
@@ -177,18 +185,20 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 15),
+
+                  // 6. Close Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: amvViolet,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
                       ),
-                      child: Text("CLOSE RECEIPT", style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: Colors.white)),
+                      child: Text("CLOSE RECEIPT", style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 12, letterSpacing: 0.5)),
                     ),
                   ),
                 ],
@@ -200,14 +210,29 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.montserrat(fontSize: 14, color: Colors.grey[600])),
-          Text(value, style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: amvViolet, size: 16),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: GoogleFonts.montserrat(fontSize: 10, color: Colors.grey)),
+                Text(value, style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
+              ],
+            ),
+          ),
         ],
       ),
     );

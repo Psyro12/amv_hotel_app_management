@@ -789,6 +789,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     String imageUrl = Uri.encodeFull(newsItem['full_image_url']);
     String title = newsItem['title'] ?? "News";
     String date = newsItem['formatted_date'] ?? "";
+    String rawDate = newsItem['news_date'] ?? ""; // Added raw date
     String content =
         newsItem['content'] ??
         newsItem['description'] ??
@@ -803,6 +804,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               title: title,
               imageUrl: imageUrl,
               date: date,
+              rawDate: rawDate, // Pass raw date
               content: content,
             ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -832,44 +834,70 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     String imageUrl = Uri.encodeFull(event['full_image_url']);
     String title = event['title'] ?? "Event";
     String dateString = event['formatted_date'] ?? "";
+    String rawDate = event['display_date_raw'] ?? ""; // Added for time ago
 
     // 🟢 1. LOGIC: Determine Status (Upcoming / Happening / Past)
     String statusText = "UPCOMING EVENT";
     Color statusColor = amvGold; // Default Gold
 
     try {
-      // Try to parse the raw SQL date (YYYY-MM-DD) if available,
-      // otherwise try to parse the formatted string (e.g. "January 15, 2026")
       DateTime? eventDate;
-
       if (event['event_date'] != null) {
         eventDate = DateTime.parse(event['event_date']);
       } else {
-        // Fallback: needs intl package, but usually 'event_date' exists in DB select *
         eventDate = DateFormat("MMMM d, yyyy").parse(dateString);
       }
-
-      // Normalize dates to ignore time (compare dates only)
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final eDate = DateTime(eventDate.year, eventDate.month, eventDate.day);
 
       if (eDate.isBefore(today)) {
         statusText = "PAST EVENT";
-        statusColor = Colors.grey; // Grey for past
+        statusColor = Colors.grey;
       } else if (eDate.isAtSameMomentAs(today)) {
         statusText = "HAPPENING NOW";
-        statusColor = Colors.green; // Green for active
+        statusColor = Colors.green;
       } else {
         statusText = "UPCOMING EVENT";
-        statusColor = amvGold; // Gold for future
+        statusColor = amvGold;
       }
     } catch (e) {
-      // If parsing fails, default to Upcoming
       print("Date parse error: $e");
     }
 
-    // 🟢 2. Extract Month/Day for the big calendar badge
+    // 🟢 2. Relative Time (Time Ago) Calculation Logic
+    String getTimeAgo(String raw, String formatted) {
+      try {
+        if (raw.isEmpty || raw.contains("0000-00-00") || formatted.toLowerCase().contains("recently")) {
+          return "posted recently";
+        }
+        DateTime postDate = DateTime.parse(raw);
+        DateTime now = DateTime.now();
+        if (postDate.year < 2010) return "posted recently";
+        Duration diff = now.difference(postDate);
+        if (diff.isNegative) return "posted just now";
+
+        if (diff.inDays >= 365) {
+          int years = (diff.inDays / 365).floor();
+          return "posted $years ${years == 1 ? 'year' : 'years'} ago";
+        } else if (diff.inDays >= 30) {
+          int months = (diff.inDays / 30).floor();
+          return "posted $months ${months == 1 ? 'month' : 'months'} ago";
+        } else if (diff.inDays > 0) {
+          return "posted ${diff.inDays} ${diff.inDays == 1 ? 'day' : 'days'} ago";
+        } else if (diff.inHours > 0) {
+          return "posted ${diff.inHours} ${diff.inHours == 1 ? 'hour' : 'hours'} ago";
+        } else if (diff.inMinutes > 0) {
+          return "posted ${diff.inMinutes} ${diff.inMinutes == 1 ? 'min' : 'mins'} ago";
+        } else {
+          return "posted just now";
+        }
+      } catch (e) { return "posted recently"; }
+    }
+
+    String postedTimeAgo = getTimeAgo(rawDate, dateString);
+
+    // 🟢 3. Extract Month/Day
     List<String> dateParts = dateString.split(' ');
     String month = dateParts.isNotEmpty
         ? dateParts[0].substring(0, 3).toUpperCase()
@@ -1048,6 +1076,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // 🟢 Meta Row (Time Ago & Icon)
+                              Row(
+                                children: [
+                                  const Icon(Icons.access_time_filled_rounded, size: 16, color: Colors.grey),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    postedTimeAgo,
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Icon(Icons.event_available_rounded, color: amvGold, size: 20),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              const Divider(),
+                              const SizedBox(height: 20),
+
                               Row(
                                 children: [
                                   Expanded(
@@ -4915,6 +4964,7 @@ class NewsDetailScreen extends StatefulWidget {
   final String title;
   final String imageUrl;
   final String date;
+  final String rawDate;
   final String content;
 
   const NewsDetailScreen({
@@ -4922,6 +4972,7 @@ class NewsDetailScreen extends StatefulWidget {
     required this.title,
     required this.imageUrl,
     required this.date,
+    required this.rawDate,
     required this.content,
   }) : super(key: key);
 
@@ -4966,11 +5017,50 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
     super.dispose();
   }
 
-  // 🟢 Helper: Calculate Reading Time
-  String _getReadingTime() {
-    int wordCount = widget.content.split(RegExp(r'\s+')).length;
-    int readTime = (wordCount / 200).ceil(); // Avg reading speed 200 wpm
-    return "$readTime min read";
+  // 🟢 Helper: Calculate Relative Time
+  String _getTimeAgo() {
+    try {
+      // 1. Check for invalid or "Recently" fallbacks
+      if (widget.rawDate.isEmpty || 
+          widget.rawDate.contains("0000-00-00") || 
+          widget.date.toLowerCase().contains("recently") ||
+          widget.date.contains("-0001")) {
+        return "posted recently";
+      }
+
+      DateTime postDate = DateTime.parse(widget.rawDate);
+      DateTime now = DateTime.now();
+
+      // 2. Sanity Check: If the date is absurdly old (e.g., year 0/1/-1 from DB error)
+      if (postDate.year < 2010) { // News probably isn't from before 2010
+        return "posted recently";
+      }
+
+      Duration diff = now.difference(postDate);
+
+      // 3. Handle future dates (if server time is slightly ahead)
+      if (diff.isNegative) {
+        return "posted just now";
+      }
+
+      if (diff.inDays >= 365) {
+        int years = (diff.inDays / 365).floor();
+        return "posted $years ${years == 1 ? 'year' : 'years'} ago";
+      } else if (diff.inDays >= 30) {
+        int months = (diff.inDays / 30).floor();
+        return "posted $months ${months == 1 ? 'month' : 'months'} ago";
+      } else if (diff.inDays > 0) {
+        return "posted ${diff.inDays} ${diff.inDays == 1 ? 'day' : 'days'} ago";
+      } else if (diff.inHours > 0) {
+        return "posted ${diff.inHours} ${diff.inHours == 1 ? 'hour' : 'hours'} ago";
+      } else if (diff.inMinutes > 0) {
+        return "posted ${diff.inMinutes} ${diff.inMinutes == 1 ? 'min' : 'mins'} ago";
+      } else {
+        return "posted just now";
+      }
+    } catch (e) {
+      return "posted recently";
+    }
   }
 
   @override
@@ -5048,7 +5138,9 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                             borderRadius: BorderRadius.circular(5),
                           ),
                           child: Text(
-                            widget.date.toUpperCase(),
+                            (widget.date.contains("-0001") || widget.date.contains("0000")) 
+                                ? "RECENTLY" 
+                                : widget.date.toUpperCase(),
                             style: GoogleFonts.montserrat(
                               color: Colors.white,
                               fontSize: 10,
@@ -5104,10 +5196,10 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                       // Meta Row
                       Row(
                         children: [
-                          const Icon(Icons.timer, size: 16, color: Colors.grey),
-                          const SizedBox(width: 5),
+                          const Icon(Icons.access_time_filled_rounded, size: 16, color: Colors.grey),
+                          const SizedBox(width: 8),
                           Text(
-                            _getReadingTime(),
+                            _getTimeAgo(),
                             style: GoogleFonts.montserrat(
                               fontSize: 12,
                               color: Colors.grey,
@@ -5116,8 +5208,9 @@ class _NewsDetailScreenState extends State<NewsDetailScreen>
                           ),
                           const Spacer(),
                           const Icon(
-                            Icons.star_border,
+                            Icons.newspaper_rounded,
                             color: Color(0xFFD4AF37),
+                            size: 20,
                           ),
                         ],
                       ),

@@ -197,99 +197,79 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
         return Align(
           alignment: Alignment.bottomCenter,
           child: Material(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
             color: Colors.white,
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(30, 15, 30, 30),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 25),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Handle
                   Container(
-                    width: 50, height: 5,
-                    margin: const EdgeInsets.only(bottom: 30),
+                    width: 40, height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(5)),
                   ),
 
-                  // 1. Signature AMV Icon Header
+                  // 1. Hero Icon
                   Container(
-                    width: 80,
-                    height: 80,
+                    padding: const EdgeInsets.all(15),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [amvViolet, const Color(0xFF4A1955)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: amvGold.withOpacity(0.1),
                       shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: amvViolet.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        )
-                      ],
                     ),
-                    child: Icon(Icons.cancel_presentation_rounded, color: amvGold, size: 40),
+                    child: Icon(Icons.cancel_presentation_rounded, color: amvGold, size: 35),
                   ),
                   
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 12),
 
                   // 2. Title
                   Text(
                     "CANCEL BOOKING",
                     textAlign: TextAlign.center,
                     style: GoogleFonts.montserrat(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                       color: amvViolet,
-                      letterSpacing: 1.2,
                     ),
                   ),
                   
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 8),
 
                   Text(
                     "Please let us know why you wish to cancel this reservation. Your feedback helps us improve.",
                     textAlign: TextAlign.center,
                     style: GoogleFonts.montserrat(
-                      fontSize: 13,
+                      fontSize: 11,
                       color: Colors.grey[600],
-                      height: 1.5,
-                      fontWeight: FontWeight.w500,
+                      height: 1.4,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // 3. Reason Input
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: TextField(
+                      controller: reasonCtrl,
+                      maxLines: 3,
+                      style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w500),
+                      decoration: InputDecoration(
+                        hintText: "Enter your reason here...",
+                        hintStyle: GoogleFonts.montserrat(fontSize: 12, color: Colors.grey[400]),
+                        contentPadding: const EdgeInsets.all(15),
+                        border: InputBorder.none,
+                      ),
                     ),
                   ),
 
                   const SizedBox(height: 25),
-
-                  // 3. Reason Input
-                  TextField(
-                    controller: reasonCtrl,
-                    maxLines: 4,
-                    style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w500),
-                    decoration: InputDecoration(
-                      hintText: "Enter your reason here...",
-                      hintStyle: GoogleFonts.montserrat(fontSize: 13, color: Colors.grey[400]),
-                      filled: true,
-                      fillColor: const Color(0xFFF9FAFB),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide(color: Colors.grey[200]!),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide(color: Colors.grey[100]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: const BorderSide(color: Color(0xFFD4AF37)),
-                      ),
-                      contentPadding: const EdgeInsets.all(20),
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
 
                   // 4. Action Buttons
                   Row(
@@ -298,48 +278,45 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             side: BorderSide(color: Colors.grey[200]!),
                           ),
                           child: Text(
-                            "GO BACK",
+                            "BACK",
                             style: GoogleFonts.montserrat(
                               fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                              fontSize: 12,
                               color: Colors.grey[500],
-                              letterSpacing: 1,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 15),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
                             if (reasonCtrl.text.trim().isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("Please provide a reason.")),
+                                const SnackBar(content: Text("Please provide a reason")),
                               );
                               return;
                             }
-                            Navigator.pop(context); // Close this dialog
-                            Navigator.pop(context); // Close details modal
+                            Navigator.pop(context);
                             _requestCancellation(bookingId, reasonCtrl.text.trim());
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.redAccent,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            backgroundColor: const Color(0xFFEF4444),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             elevation: 0,
                           ),
                           child: Text(
-                            "SUBMIT",
+                            "REQUEST",
                             style: GoogleFonts.montserrat(
                               fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              letterSpacing: 1,
+                              fontSize: 12,
+                              color: Colors.white,
                             ),
                           ),
                         ),
@@ -366,13 +343,21 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     final statusIcon = _getStatusIcon(status);
 
     final rawStatus = booking['status']?.toString().toLowerCase() ?? '';
-    final arrivalStatus = booking['arrival_status']?.toString().toLowerCase() ?? '';
+    final arrivalStatus = (booking['arrival_status'] ?? booking['status'])?.toString().toLowerCase() ?? '';
 
     // Check if cancellation is allowed
-    // 1. Must NOT be already cancelled or rejected
+    // 1. Must NOT be already cancelled, no-show, or requested
     // 2. Must NOT be already in-house or checked out
-    final bool canCancel = (rawStatus != 'cancelled' && rawStatus != 'rejected' && rawStatus != 'cancel_requested') && 
-                           (arrivalStatus != 'in_house' && arrivalStatus != 'checked_out');
+    final bool canCancel = !rawStatus.contains('cancel') && 
+                           !rawStatus.contains('reject') &&
+                           !arrivalStatus.contains('cancel') &&
+                           !arrivalStatus.contains('no_show') &&
+                           !arrivalStatus.contains('no show') &&
+                           !arrivalStatus.contains('in_house') &&
+                           !arrivalStatus.contains('in house') &&
+                           !arrivalStatus.contains('checked_out') &&
+                           !arrivalStatus.contains('checkout') &&
+                           !arrivalStatus.contains('completed');
 
     showGeneralDialog(
       context: context,

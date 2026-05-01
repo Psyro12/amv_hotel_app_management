@@ -45,6 +45,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       final url = Uri.parse("${ApiConfig.baseUrl}/api_get_my_bookings.php");
       final response = await http.post(
         url,
+        headers: {"Content-Type": "application/json"},
         body: json.encode({
           'uid': widget.userId,
           'email': widget.userEmail,
